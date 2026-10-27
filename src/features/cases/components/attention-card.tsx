@@ -11,27 +11,30 @@ import { reminderShortLabels } from '@/domain/enums';
 import { formatCents } from '@/domain/money';
 import { spacing } from '@/theme/tokens';
 
-import { type CaseSummary, useCaseDetail } from '../use-case-data';
+import type { AttentionSummary } from '../use-case-data';
 
 /** Home card for a case that needs action: next step, readiness and the two likely actions. */
-export function AttentionCard({ summary }: { summary: CaseSummary }) {
-  const { refundCase, dueReminder } = summary;
-  const detail = useCaseDetail(refundCase.id);
-  const { nextStep, readiness, money } = detail;
-  const amount = money?.remainingCents ?? money?.expectedCents ?? refundCase.purchaseAmountCents;
-  const delivered = detail.events.find((event) => event.type === 'delivered');
+export function AttentionCard({ summary }: { summary: AttentionSummary }) {
+  const { refundCase, dueReminder, nextStep, readiness, money, deliveredAt } = summary;
+  const amount = money.remainingCents ?? money.expectedCents ?? refundCase.purchaseAmountCents;
   const facts = [
     refundCase.handoffDate ? `Returned ${formatShortDate(refundCase.handoffDate)}` : null,
-    delivered ? `Delivered ${formatShortDate(new Date(delivered.occurredAt))}` : null,
+    deliveredAt !== null ? `Delivered ${formatShortDate(new Date(deliveredAt))}` : null,
   ].filter(Boolean);
   const openCase = () => router.push({ pathname: '/case/[id]', params: { id: refundCase.id } });
 
   const primaryAction =
-    nextStep?.action === 'contact-retailer' || nextStep?.action === 'ask-remaining'
+    nextStep.action === 'contact-retailer' || nextStep.action === 'ask-remaining'
       ? {
           label: 'Draft follow-up',
           onPress: () =>
-            router.push({ pathname: '/case/[id]/follow-up', params: { id: refundCase.id } }),
+            router.push({
+              pathname: '/case/[id]/follow-up',
+              params: {
+                id: refundCase.id,
+                ...(nextStep.action === 'ask-remaining' ? { request: 'remaining' } : {}),
+              },
+            }),
         }
       : { label: 'Open case', onPress: openCase };
 
@@ -67,31 +70,27 @@ export function AttentionCard({ summary }: { summary: CaseSummary }) {
           </AppText>
         ) : null}
       </View>
-      {nextStep ? (
-        <AppText variant="bodyLarge">
-          {nextStep.title}.{' '}
-          <AppText variant="bodyLarge" tone="muted">
-            {nextStep.reasons[0] ?? ''}
-          </AppText>
+      <AppText variant="bodyLarge">
+        {nextStep.title}.{' '}
+        <AppText variant="bodyLarge" tone="muted">
+          {nextStep.reasons[0] ?? ''}
         </AppText>
-      ) : null}
+      </AppText>
       {dueReminder && !summary.followUpDue ? (
         <AppText variant="caption" tone="muted">
           {`Reminder set for ${formatTime(dueReminder.scheduledAt)}`}
         </AppText>
       ) : null}
-      {readiness ? (
-        <View style={styles.readiness}>
-          <SegmentBar
-            total={readiness.total}
-            filled={readiness.satisfiedCount}
-            accessibilityLabel={`Evidence ${readiness.satisfiedCount} of ${readiness.total}`}
-          />
-          <AppText variant="label" tone="muted">
-            {`Evidence ${readiness.satisfiedCount}/${readiness.total}`}
-          </AppText>
-        </View>
-      ) : null}
+      <View style={styles.readiness}>
+        <SegmentBar
+          total={readiness.total}
+          filled={readiness.satisfiedCount}
+          accessibilityLabel={`Evidence ${readiness.satisfiedCount} of ${readiness.total}`}
+        />
+        <AppText variant="label" tone="muted">
+          {`Evidence ${readiness.satisfiedCount}/${readiness.total}`}
+        </AppText>
+      </View>
       <View style={styles.actions}>
         <Button
           label={primaryAction.label}
@@ -100,16 +99,19 @@ export function AttentionCard({ summary }: { summary: CaseSummary }) {
           onPress={primaryAction.onPress}
         />
         <Button
-          label={readiness?.firstMissing ? 'Add proof' : 'Open case'}
+          label={readiness.firstMissing ? 'Add proof' : 'Open case'}
           variant="secondary"
           size="medium"
           flex={1}
+          accessibilityHint={
+            readiness.firstMissing ? `Adds ${readiness.firstMissing.label}` : undefined
+          }
           onPress={
-            readiness?.firstMissing
+            readiness.firstMissing
               ? () =>
                   router.push({
-                    pathname: '/case/[id]/evidence',
-                    params: { id: refundCase.id },
+                    pathname: '/case/[id]/evidence/new',
+                    params: { id: refundCase.id, type: readiness.firstMissing?.suggestedType },
                   })
               : openCase
           }

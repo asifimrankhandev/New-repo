@@ -1,5 +1,20 @@
-import { ActivityIndicator, Pressable, type PressableProps, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  type GestureResponderEvent,
+  Pressable,
+  type PressableProps,
+  StyleSheet,
+  View,
+} from 'react-native';
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/use-theme';
 import { radius, spacing } from '@/theme/tokens';
 
@@ -22,6 +37,9 @@ export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> 
 }
 
 const HEIGHTS: Record<ButtonSize, number> = { large: 56, medium: 46, small: 36 };
+const PRESS_SPRING = { damping: 18, stiffness: 420, mass: 0.6, reduceMotion: ReduceMotion.System };
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function Button({
   label,
@@ -34,9 +52,15 @@ export function Button({
   flex,
   disabled,
   accessibilityHint,
+  onPress,
+  onPressIn,
+  onPressOut,
   ...props
 }: ButtonProps) {
   const { colors } = useTheme();
+  const reduceMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
   const isDisabled = disabled || loading;
 
   const palette = {
@@ -50,14 +74,31 @@ export function Button({
   const scheme = palette[variant];
   const showTile = icon && iconPlacement === 'tile';
 
+  const handlePressIn = (event: GestureResponderEvent) => {
+    if (!reduceMotion) scale.set(withSpring(size === 'large' ? 0.975 : 0.96, PRESS_SPRING));
+    onPressIn?.(event);
+  };
+  const handlePressOut = (event: GestureResponderEvent) => {
+    scale.set(withSpring(1, PRESS_SPRING));
+    onPressOut?.(event);
+  };
+  const handlePress = (event: GestureResponderEvent) => {
+    if (variant === 'primary' || variant === 'accent') haptics.tap();
+    onPress?.(event);
+  };
+
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel ?? label}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       accessibilityHint={accessibilityHint}
       disabled={isDisabled}
       hitSlop={size === 'small' ? 4 : 0}
-      style={({ pressed }) => [
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[
         styles.base,
         {
           height: HEIGHTS[size],
@@ -70,10 +111,11 @@ export function Button({
           justifyContent: showTile ? 'space-between' : 'center',
           paddingLeft: showTile ? spacing.xl : spacing.lg,
           paddingRight: showTile ? spacing.sm : spacing.lg,
-          opacity: isDisabled ? 0.45 : pressed ? 0.82 : 1,
+          opacity: isDisabled ? 0.45 : 1,
         },
         fullWidth && styles.fullWidth,
         flex !== undefined && { flex },
+        pressStyle,
       ]}
       {...props}
     >
@@ -105,7 +147,7 @@ export function Button({
           ) : null}
         </>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

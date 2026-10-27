@@ -19,6 +19,7 @@ import {
 } from '@/features/cases/components/case-form-fields';
 import { MissingCase } from '@/features/cases/components/missing-case';
 import { showError } from '@/lib/dialogs';
+import { haptics } from '@/lib/haptics';
 import { useForm } from '@/lib/use-form';
 import { spacing } from '@/theme/tokens';
 
@@ -59,6 +60,7 @@ function EditCaseForm({ refundCase }: { refundCase: RefundCase }) {
     setSaving(true);
     try {
       updateCase(refundCase.id, input);
+      haptics.success();
       router.back();
     } catch (error) {
       showError('Couldn’t save your changes', error);

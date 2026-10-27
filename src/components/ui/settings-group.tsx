@@ -1,6 +1,7 @@
 import { Children, isValidElement, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/use-theme';
 import { spacing } from '@/theme/tokens';
 
@@ -105,7 +106,10 @@ export function ToggleRow({ label, value, onValueChange, description, disabled }
         accessibilityLabel={label}
         value={value}
         disabled={disabled}
-        onValueChange={onValueChange}
+        onValueChange={(next) => {
+          haptics.select();
+          onValueChange(next);
+        }}
         trackColor={{ false: colors.line, true: colors.ink }}
         thumbColor={value ? colors.accent : colors.surface}
         ios_backgroundColor={colors.line}

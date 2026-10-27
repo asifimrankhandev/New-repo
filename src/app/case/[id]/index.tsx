@@ -6,6 +6,7 @@ import { BottomBar } from '@/components/ui/bottom-bar';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Notice } from '@/components/ui/notice';
+import { Reveal } from '@/components/ui/reveal';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { SettingsGroup, SettingsRow } from '@/components/ui/settings-group';
@@ -155,7 +156,7 @@ export default function CaseDetailScreen() {
         </BottomBar>
       }
     >
-      <View style={styles.header}>
+      <Reveal style={styles.header}>
         <AppText variant="label" tone="muted" numberOfLines={1}>
           {[refundCase.retailerName, refundCase.orderReference].filter(Boolean).join(' · ')}
         </AppText>
@@ -168,9 +169,9 @@ export default function CaseDetailScreen() {
             {`Updated ${formatRelativeDay(refundCase.updatedAt).toLowerCase()}`}
           </AppText>
         </View>
-      </View>
+      </Reveal>
 
-      <View style={styles.money}>
+      <Reveal index={1} style={styles.money}>
         <StatGrid stats={stats} size="large" />
         {money.storeCreditCents > 0 || money.exchangeCents > 0 ? (
           <AppText variant="caption" tone="muted">
@@ -191,7 +192,7 @@ export default function CaseDetailScreen() {
         <AppText variant="small" tone="muted">
           Arithmetic from amounts you entered — not a statement of what’s owed.
         </AppText>
-      </View>
+      </Reveal>
 
       {refundCase.isSample ? (
         <Notice icon="info" tone="surface" title="Sample case.">
@@ -199,7 +200,11 @@ export default function CaseDetailScreen() {
         </Notice>
       ) : null}
 
-      {nextStep ? <NextStepCard step={nextStep} caseId={id} /> : null}
+      {nextStep ? (
+        <Reveal index={2}>
+          <NextStepCard step={nextStep} caseId={id} />
+        </Reveal>
+      ) : null}
 
       {!resolved ? (
         <View style={styles.section}>

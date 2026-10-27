@@ -48,7 +48,8 @@ export function createSampleCase(): string {
       expectedRefundDate: addDaysIso(today, -7),
       expectedRefundSource: 'retailer-message',
       expectedRefundSourceNote: null,
-      notes: 'This is a sample case. Delete it any time from the case menu.',
+      notes:
+        'This is a sample case. Delete it any time from Manage case at the bottom of this screen.',
     },
     { isSample: true },
   );

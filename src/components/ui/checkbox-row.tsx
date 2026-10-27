@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/use-theme';
 import { spacing } from '@/theme/tokens';
 
@@ -32,7 +33,10 @@ export function CheckboxRow({ label, checked, onChange, description }: CheckboxR
     <Pressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
-      onPress={() => onChange(!checked)}
+      onPress={() => {
+        haptics.select();
+        onChange(!checked);
+      }}
       style={styles.row}
     >
       <Checkbox checked={checked} />

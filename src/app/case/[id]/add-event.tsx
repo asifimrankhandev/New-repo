@@ -29,6 +29,7 @@ import {
   updateTimelineEvent,
 } from '@/features/timeline/timeline-repository';
 import { confirm, showError } from '@/lib/dialogs';
+import { haptics } from '@/lib/haptics';
 import { useForm } from '@/lib/use-form';
 import { spacing } from '@/theme/tokens';
 
@@ -132,6 +133,7 @@ export default function AddEventScreen() {
           description: parsed.description,
         });
       }
+      haptics.success();
       if (attachAfter) {
         router.replace({ pathname: '/case/[id]/evidence/new', params: { id: params.id } });
       } else {
@@ -204,6 +206,7 @@ export default function AddEventScreen() {
       <View style={styles.row}>
         <DateField
           label="Date"
+          flex={1}
           value={values.date}
           onChange={(value) => setField('date', value)}
           error={errors.date}

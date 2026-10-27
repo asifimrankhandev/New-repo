@@ -6,7 +6,13 @@ import { InterTight_600SemiBold } from '@expo-google-fonts/inter-tight/600SemiBo
 import { InterTight_700Bold } from '@expo-google-fonts/inter-tight/700Bold';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  type ErrorBoundaryProps,
+  Stack,
+  ThemeProvider,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
@@ -14,6 +20,7 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/app-text';
+import { Button } from '@/components/ui/button';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
 import { AppLifecycle } from '@/features/app/app-lifecycle';
@@ -88,6 +95,22 @@ function AppNavigator() {
         <Stack.Screen name="case/[id]/export" options={{ presentation: 'modal' }} />
       </Stack>
     </ThemeProvider>
+  );
+}
+
+/** Route-level crash screen: keeps the user's data safe and offers a retry. */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.error, { backgroundColor: colors.background }]}>
+      <AppText variant="headline" accessibilityRole="header">
+        Something went wrong
+      </AppText>
+      <AppText variant="body" tone="muted">
+        This screen hit an unexpected problem. Your cases are stored safely on this device.
+      </AppText>
+      <Button label="Try again" onPress={() => void retry()} />
+    </View>
   );
 }
 

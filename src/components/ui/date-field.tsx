@@ -21,6 +21,8 @@ export interface DateFieldProps extends BaseProps {
   onChange: (value: IsoDate | '') => void;
   /** Optional fields show a clear action once a date is set. */
   optional?: boolean;
+  /** Share a row with siblings; omit in vertical stacks. */
+  flex?: number;
 }
 
 /** Native date picker: a field that opens the dialog on Android, the compact picker on iOS. */
@@ -32,6 +34,7 @@ export function DateField({
   optional = false,
   minimumDate,
   maximumDate,
+  flex,
 }: DateFieldProps) {
   const { colors, scheme } = useTheme();
   const date = value ? fromIsoDate(value) : new Date();
@@ -46,7 +49,7 @@ export function DateField({
     });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, flex !== undefined && { flex }]}>
       <AppText variant="label" tone="muted">
         {label}
       </AppText>
@@ -150,7 +153,7 @@ export function TimeField({ label, hour, minute, onChange }: TimeFieldProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 6, flex: 1 },
+  container: { gap: 6 },
   field: {
     minHeight: 54,
     borderRadius: radius.lg,

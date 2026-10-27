@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/use-theme';
 import { fonts, radius, spacing } from '@/theme/tokens';
 
@@ -45,7 +46,10 @@ export function ChoiceChips<T extends string>({
               key={option.value}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected }}
-              onPress={() => onChange(selected && allowDeselect ? '' : option.value)}
+              onPress={() => {
+                haptics.select();
+                onChange(selected && allowDeselect ? '' : option.value);
+              }}
               style={({ pressed }) => [
                 styles.chip,
                 {

@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useScrollToTop } from 'expo-router';
+import { type ComponentRef, type ReactNode, useRef } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -34,8 +35,12 @@ export function Screen({
   contentStyle,
 }: ScreenProps) {
   const { colors } = useTheme();
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  // Tapping the active tab again scrolls its root screen back to the top.
+  useScrollToTop(scrollRef);
   const content = scroll ? (
     <ScrollView
+      ref={scrollRef}
       contentContainerStyle={[styles.scrollContent, contentStyle]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"

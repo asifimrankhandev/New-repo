@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/use-theme';
 import { radius, spacing } from '@/theme/tokens';
 
@@ -44,7 +45,10 @@ export function OptionCards<T extends string>({
               accessibilityRole="radio"
               accessibilityState={{ checked: selected }}
               accessibilityHint={option.hint}
-              onPress={() => onChange(option.value)}
+              onPress={() => {
+                if (!selected) haptics.select();
+                onChange(option.value);
+              }}
               style={({ pressed }) => [
                 styles.card,
                 {

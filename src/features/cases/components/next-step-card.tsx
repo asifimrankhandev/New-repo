@@ -86,9 +86,12 @@ export function NextStepCard({ step, caseId }: { step: NextStep; caseId: string 
             Why this step
           </AppText>
           {step.reasons.map((reason) => (
-            <AppText key={reason} variant="caption" tone="inverseMuted">
-              {`•  ${reason}`}
-            </AppText>
+            <View key={reason} style={styles.reason}>
+              <View style={[styles.bullet, { backgroundColor: colors.inverseMuted }]} />
+              <AppText variant="caption" tone="inverseMuted" style={styles.reasonText}>
+                {reason}
+              </AppText>
+            </View>
           ))}
         </View>
       ) : null}
@@ -132,6 +135,9 @@ const styles = StyleSheet.create({
   text: { gap: spacing.sm },
   eyebrow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 8, height: 8, borderRadius: 4 },
+  reason: { flexDirection: 'row', gap: 10 },
+  bullet: { width: 4, height: 4, borderRadius: 2, marginTop: 7 },
+  reasonText: { flex: 1 },
   reasons: { gap: spacing.xs, paddingTop: spacing.md, borderTopWidth: 1 },
   reasonLabel: { fontSize: 10.5 },
   actions: { flexDirection: 'row', gap: spacing.sm },

@@ -52,9 +52,12 @@ export function WhatFields({ form }: { form: CaseForm }) {
           error={errors.purchaseAmount}
           keyboardType="decimal-pad"
           placeholder="0.00"
+          prefix="$"
+          flex={1}
         />
         <DateField
           label="Order date"
+          flex={1}
           optional
           value={values.purchaseDate}
           onChange={(value) => setField('purchaseDate', value)}
@@ -142,6 +145,7 @@ export function RefundFields({ form }: { form: CaseForm }) {
           error={errors.expectedRefundAmount}
           keyboardType="decimal-pad"
           placeholder="Leave blank if unsure"
+          prefix="$"
         />
         {canCopyPurchase ? (
           <Button

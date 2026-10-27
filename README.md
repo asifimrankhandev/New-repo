@@ -36,7 +36,16 @@ npm run android    # or: npm run ios
 
 The app uses native modules beyond Expo Go’s set (SQLite change listeners, notifications
 channels, date picker), so use a development build: `npx expo run:android` / `npx expo run:ios`,
-or `eas build --profile development`.
+or a cloud build with `expo-dev-client` (already installed):
+
+```bash
+npx eas-cli@latest build --profile development            # device build
+npx eas-cli@latest build --profile development-simulator  # iOS simulator build
+npx eas-cli@latest build --profile preview                # internal test build
+npx eas-cli@latest build --profile production             # store build
+```
+
+Profiles live in `eas.json`.
 
 ## Scripts
 

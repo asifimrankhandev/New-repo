@@ -185,7 +185,7 @@ export default function RemindersScreen() {
         </View>
       ) : null}
 
-      {permission === 'denied' ? (
+      {permission === 'denied' && data.length > 0 ? (
         <Notice
           icon="bellOff"
           tone="dashed"

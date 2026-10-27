@@ -73,6 +73,10 @@ export function selectEventsForCase(caseId: string) {
   return db.select().from(timelineEvents).where(eq(timelineEvents.caseId, caseId));
 }
 
+export function selectAllEvents() {
+  return db.select().from(timelineEvents);
+}
+
 export function getEvent(id: string) {
   return db.select().from(timelineEvents).where(eq(timelineEvents.id, id)).get();
 }

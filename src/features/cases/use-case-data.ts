@@ -15,7 +15,10 @@ import { getNextStep, type NextStep } from '@/domain/next-step';
 import { getReadiness, type Readiness } from '@/domain/readiness';
 import { reconcile, type Reconciliation } from '@/domain/reconciliation';
 import { endOfDay, useNow } from '@/lib/use-now';
-import { selectEvidenceForCase } from '@/features/evidence/evidence-repository';
+import {
+  selectEvidenceForCase,
+  selectEvidenceTypes,
+} from '@/features/evidence/evidence-repository';
 import {
   selectAllRefundEntries,
   selectRefundEntriesForCase,
@@ -24,7 +27,7 @@ import {
   selectPendingReminders,
   selectRemindersForCase,
 } from '@/features/reminders/reminder-repository';
-import { selectEventsForCase } from '@/features/timeline/timeline-repository';
+import { selectAllEvents, selectEventsForCase } from '@/features/timeline/timeline-repository';
 
 import { selectActiveCases, selectArchivedCases, selectCase } from './case-repository';
 
@@ -36,12 +39,19 @@ export interface CaseSummary {
   dueReminder: Reminder | null;
 }
 
-function groupEntries(entries: readonly RefundEntry[]) {
-  const byCase = new Map<string, RefundEntry[]>();
-  for (const entry of entries) {
-    const list = byCase.get(entry.caseId) ?? [];
-    list.push(entry);
-    byCase.set(entry.caseId, list);
+/** Case that needs action, with the insight its Home card shows. */
+export interface AttentionSummary extends CaseSummary {
+  nextStep: NextStep;
+  readiness: Readiness;
+  deliveredAt: number | null;
+}
+
+function groupByCase<T extends { caseId: string }>(rows: readonly T[]): Map<string, T[]> {
+  const byCase = new Map<string, T[]>();
+  for (const row of rows) {
+    const list = byCase.get(row.caseId);
+    if (list) list.push(row);
+    else byCase.set(row.caseId, [row]);
   }
   return byCase;
 }
@@ -67,7 +77,7 @@ function summarize(
 
 export interface HomeData {
   loaded: boolean;
-  needsAttention: CaseSummary[];
+  needsAttention: AttentionSummary[];
   waiting: CaseSummary[];
   resolved: CaseSummary[];
   totals: {
@@ -84,19 +94,39 @@ export function useHomeData(): HomeData {
   const casesQuery = useLiveQuery(selectActiveCases());
   const entriesQuery = useLiveQuery(selectAllRefundEntries());
   const remindersQuery = useLiveQuery(selectPendingReminders());
+  // Two whole-table reads instead of per-card queries: Home stays fast as cases grow.
+  const eventsQuery = useLiveQuery(selectAllEvents());
+  const evidenceQuery = useLiveQuery(selectEvidenceTypes());
   const now = useNow();
 
   return useMemo(() => {
     const today = todayIso(new Date(now));
-    const entriesByCase = groupEntries(entriesQuery.data);
+    const entriesByCase = groupByCase(entriesQuery.data);
+    const eventsByCase = groupByCase(eventsQuery.data);
+    const evidenceByCase = groupByCase(evidenceQuery.data);
     const pendingReminders = remindersQuery.data.map((row) => row.reminder);
     const summaries = casesQuery.data.map((refundCase) =>
       summarize(refundCase, entriesByCase.get(refundCase.id) ?? [], pendingReminders, now),
     );
     const open = summaries.filter((item) => !isResolvedStatus(item.refundCase.status));
-    const needsAttention = open.filter((item) => item.followUpDue || item.dueReminder);
+    const attentionIds = new Set(
+      open.filter((item) => item.followUpDue || item.dueReminder).map((item) => item.refundCase.id),
+    );
+    const needsAttention = open
+      .filter((item) => attentionIds.has(item.refundCase.id))
+      .map((item): AttentionSummary => {
+        const events = eventsByCase.get(item.refundCase.id) ?? [];
+        const entries = entriesByCase.get(item.refundCase.id) ?? [];
+        const delivered = events.find((event) => event.type === 'delivered');
+        return {
+          ...item,
+          nextStep: getNextStep({ refundCase: item.refundCase, events, entries, today }),
+          readiness: getReadiness(item.refundCase, evidenceByCase.get(item.refundCase.id) ?? []),
+          deliveredAt: delivered?.occurredAt ?? null,
+        };
+      });
     const waiting = open
-      .filter((item) => !needsAttention.includes(item))
+      .filter((item) => !attentionIds.has(item.refundCase.id))
       .sort((a, b) =>
         (a.refundCase.expectedRefundDate ?? '9999').localeCompare(
           b.refundCase.expectedRefundDate ?? '9999',
@@ -131,7 +161,15 @@ export function useHomeData(): HomeData {
         nextDate: upcomingDates[0] ?? null,
       },
     };
-  }, [casesQuery.data, casesQuery.updatedAt, entriesQuery.data, remindersQuery.data, now]);
+  }, [
+    casesQuery.data,
+    casesQuery.updatedAt,
+    entriesQuery.data,
+    remindersQuery.data,
+    eventsQuery.data,
+    evidenceQuery.data,
+    now,
+  ]);
 }
 
 /** Summaries for an arbitrary list of cases (archive, search), with live refund entries. */
@@ -139,7 +177,7 @@ export function useCaseSummaries(refundCases: readonly RefundCase[]): CaseSummar
   const entriesQuery = useLiveQuery(selectAllRefundEntries());
   const now = useNow();
   return useMemo(() => {
-    const entriesByCase = groupEntries(entriesQuery.data);
+    const entriesByCase = groupByCase(entriesQuery.data);
     return refundCases.map((refundCase) => {
       const summary = summarize(refundCase, entriesByCase.get(refundCase.id) ?? [], [], now);
       return refundCase.archivedAt === null ? summary : { ...summary, statusLabel: 'Archived' };

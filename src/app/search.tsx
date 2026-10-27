@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router } from 'expo-router';
 import { useDeferredValue, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Icon } from '@/components/ui/icon';
@@ -50,21 +50,34 @@ export default function SearchScreen() {
           />
         </View>
       }
+      scroll={false}
     >
-      {deferredTerm.length > 0 ? (
-        <AppText variant="label" tone="muted" accessibilityLiveRegion="polite">
-          {`${summaries.length} ${summaries.length === 1 ? 'result' : 'results'}`}
-        </AppText>
-      ) : (
-        <AppText variant="caption" tone="muted">
-          Search runs only on this device.
-        </AppText>
-      )}
-      <View>
-        {summaries.map((summary) => (
-          <CaseRow key={summary.refundCase.id} summary={summary} showProgress={false} />
-        ))}
-      </View>
+      <FlatList
+        data={summaries}
+        keyExtractor={(item) => item.refundCase.id}
+        renderItem={({ item }) => <CaseRow summary={item} showProgress={false} />}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        ListHeaderComponent={
+          deferredTerm.length > 0 ? (
+            <AppText variant="label" tone="muted" accessibilityLiveRegion="polite">
+              {`${summaries.length} ${summaries.length === 1 ? 'result' : 'results'}`}
+            </AppText>
+          ) : (
+            <AppText variant="caption" tone="muted">
+              Search runs only on this device.
+            </AppText>
+          )
+        }
+        ListEmptyComponent={
+          deferredTerm.length > 0 ? (
+            <AppText variant="body" tone="muted" style={styles.empty}>
+              {`No cases match “${deferredTerm}”. Try a retailer, item or order number.`}
+            </AppText>
+          ) : undefined
+        }
+      />
     </Screen>
   );
 }
@@ -89,4 +102,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   input: { flex: 1, fontFamily: fonts.regular, fontSize: 16, minHeight: 46 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxxl },
+  empty: { paddingTop: spacing.lg },
 });

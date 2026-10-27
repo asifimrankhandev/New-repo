@@ -27,6 +27,7 @@ import { MissingCase } from '@/features/cases/components/missing-case';
 import { useCaseDetail } from '@/features/cases/use-case-data';
 import { outcomeNeedsAmount, recordOutcome } from '@/features/outcome/outcome-service';
 import { showError } from '@/lib/dialogs';
+import { haptics } from '@/lib/haptics';
 import { useForm } from '@/lib/use-form';
 import { useTheme } from '@/theme/use-theme';
 import { spacing } from '@/theme/tokens';
@@ -123,6 +124,7 @@ function OutcomeForm({ refundCase, money }: { refundCase: RefundCase; money: Rec
         confirmationSource: parsed.confirmationSource || 'other',
         note: parsed.note,
       });
+      haptics.success();
       router.back();
     } catch (error) {
       showError('Couldn’t record the outcome', error);
@@ -186,9 +188,12 @@ function OutcomeForm({ refundCase, money }: { refundCase: RefundCase; money: Rec
               error={errors.amount}
               keyboardType="decimal-pad"
               placeholder="0.00"
+              prefix="$"
+              flex={1}
             />
             <DateField
               label="Received on"
+              flex={1}
               value={values.receivedDate}
               onChange={(value) => setField('receivedDate', value)}
               error={errors.receivedDate}

@@ -37,6 +37,7 @@ import {
 } from '@/features/reminders/reminder-repository';
 import { usePreferences } from '@/features/settings/preferences-repository';
 import { confirm, showError } from '@/lib/dialogs';
+import { haptics } from '@/lib/haptics';
 import { useNow } from '@/lib/use-now';
 import { spacing } from '@/theme/tokens';
 
@@ -108,6 +109,7 @@ function ReminderForm({
       } else {
         await createReminder({ caseId: refundCase.id, type, scheduledAt });
       }
+      haptics.success();
       if (!granted) {
         Alert.alert(
           'Reminder saved',

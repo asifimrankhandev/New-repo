@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { router, useNavigation, usePreventRemove } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, BackHandler, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { BottomBar } from '@/components/ui/bottom-bar';
@@ -37,6 +37,7 @@ import { requestNotificationPermission } from '@/features/reminders/notification
 import { createReminder } from '@/features/reminders/reminder-repository';
 import { usePreferences } from '@/features/settings/preferences-repository';
 import { confirm, showError } from '@/lib/dialogs';
+import { haptics } from '@/lib/haptics';
 import { useForm } from '@/lib/use-form';
 import { spacing } from '@/theme/tokens';
 
@@ -77,23 +78,40 @@ export default function NewCaseScreen() {
 
   const validateCurrent = () => (current.schema ? form.validate(current.schema) !== null : true);
 
-  const goBack = async () => {
-    if (step > 0) {
-      setStep(step - 1);
+  const navigation = useNavigation();
+  const dirty = Object.values(form.values).some((value) => value !== '');
+  /** Set right before an intentional exit (save, view existing) so it isn't intercepted. */
+  const leavingRef = useRef(false);
+
+  // Swipe-down, the close button and Android back all go through here: never lose input silently.
+  usePreventRemove(dirty, ({ data }) => {
+    if (leavingRef.current) {
+      navigation.dispatch(data.action);
       return;
     }
-    const dirty = Object.values(form.values).some((value) => value !== '');
-    if (
-      !dirty ||
-      (await confirm({
-        title: 'Discard this case?',
-        message: 'Nothing has been saved yet.',
-        confirmLabel: 'Discard',
-        destructive: true,
-      }))
-    ) {
-      router.back();
-    }
+    void confirm({
+      title: 'Discard this case?',
+      message: 'Nothing has been saved yet.',
+      confirmLabel: 'Discard',
+      destructive: true,
+    }).then((discard) => {
+      if (discard) navigation.dispatch(data.action);
+    });
+  });
+
+  // Android back steps backwards through the wizard before leaving it.
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (step === 0) return false;
+      setStep(step - 1);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [step]);
+
+  const goBack = () => {
+    if (step > 0) setStep(step - 1);
+    else router.back();
   };
 
   const save = async () => {
@@ -120,7 +138,11 @@ export default function NewCaseScreen() {
           ),
         });
       }
-      router.replace({ pathname: '/case/[id]', params: { id } });
+      haptics.success();
+      // Close the modal flow first so Back from the new case returns to the list.
+      leavingRef.current = true;
+      router.dismiss();
+      router.push({ pathname: '/case/[id]', params: { id } });
     } catch (error) {
       showError('Couldn’t save the case', error);
       setSaving(false);
@@ -150,7 +172,11 @@ export default function NewCaseScreen() {
         { cancelable: true, onDismiss: () => resolve('cancel') },
       ),
     );
-    if (choice === 'view') router.replace({ pathname: '/case/[id]', params: { id: match.id } });
+    if (choice === 'view') {
+      leavingRef.current = true;
+      router.dismiss();
+      router.push({ pathname: '/case/[id]', params: { id: match.id } });
+    }
     if (choice === 'continue') setAcknowledgedDuplicate(key);
     return choice === 'continue';
   };
@@ -194,7 +220,7 @@ export default function NewCaseScreen() {
           <TopBar
             title={`New case — ${step + 1} / ${STEPS.length}`}
             leading={step === 0 ? 'close' : 'back'}
-            onLeadingPress={() => void goBack()}
+            onLeadingPress={goBack}
             trailing={
               step > 0 && !isLast ? (
                 <Button
@@ -254,6 +280,7 @@ export default function NewCaseScreen() {
         <>
           <OptionCards
             label="Remind me to check in"
+            columns={1}
             options={reminderOptions}
             value={reminderChoice}
             onChange={setReminderChoice}

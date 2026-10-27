@@ -1,5 +1,7 @@
 import { Alert } from 'react-native';
 
+import { haptics } from './haptics';
+
 /** Native confirmation dialog as a promise; resolves true when the user confirms. */
 export function confirm(options: {
   title: string;
@@ -7,6 +9,7 @@ export function confirm(options: {
   confirmLabel: string;
   destructive?: boolean;
 }): Promise<boolean> {
+  if (options.destructive) haptics.warning();
   return new Promise((resolve) => {
     Alert.alert(
       options.title,

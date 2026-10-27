@@ -23,6 +23,7 @@ import {
   pickEvidence,
 } from '@/features/evidence/pick-evidence';
 import { showError } from '@/lib/dialogs';
+import { haptics } from '@/lib/haptics';
 import { useForm } from '@/lib/use-form';
 import { spacing } from '@/theme/tokens';
 
@@ -68,6 +69,7 @@ export default function NewEvidenceScreen() {
         mimeType: file.mimeType,
         ...parsed,
       });
+      haptics.success();
       router.back();
     } catch (error) {
       showError('Couldn’t save the evidence', error);

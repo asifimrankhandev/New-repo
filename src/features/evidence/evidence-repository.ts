@@ -75,6 +75,11 @@ export function selectEvidenceForCase(caseId: string) {
   return db.select().from(evidence).where(eq(evidence.caseId, caseId));
 }
 
+/** Only what the readiness checklist needs, for every case at once. */
+export function selectEvidenceTypes() {
+  return db.select({ caseId: evidence.caseId, evidenceType: evidence.evidenceType }).from(evidence);
+}
+
 export function selectEvidence(id: string) {
   return db.select().from(evidence).where(eq(evidence.id, id)).limit(1);
 }
