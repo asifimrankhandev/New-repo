@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "RefundBeacon",
+    "slug": "refund-beacon",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "refundbeacon",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F4F4F1",
+    "ios": {
+      "bundleIdentifier": "com.refundbeacon.app",
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.refundbeacon.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F0F0F",
+        "foregroundImage": "./assets/images/adaptive-icon-foreground.png",
+        "monochromeImage": "./assets/images/adaptive-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F4F4F1",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120,
+          "dark": {
+            "backgroundColor": "#0E0E0D",
+            "image": "./assets/images/splash-icon.png"
+          }
+        }
+      ],
+      "expo-sqlite",
+      "expo-sharing",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#FF5A1F"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "RefundBeacon uses your photos only when you choose a receipt or screenshot to add as evidence.",
+          "cameraPermission": "RefundBeacon uses the camera only when you photograph a receipt or label to add as evidence.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
