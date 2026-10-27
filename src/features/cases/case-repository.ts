@@ -43,6 +43,10 @@ export function searchCases(term: string) {
     .limit(50);
 }
 
+export function getAllCases(): RefundCase[] {
+  return db.select().from(cases).all();
+}
+
 export function getCase(id: string): RefundCase | undefined {
   return db.select().from(cases).where(eq(cases.id, id)).get();
 }

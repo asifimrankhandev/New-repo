@@ -71,6 +71,7 @@ function DueReminderCard({
             void rescheduleReminder(
               reminder.id,
               Math.max(reminder.scheduledAt, Date.now()) + DAY_MS,
+              { reason: 'snooze' },
             )
           }
         />

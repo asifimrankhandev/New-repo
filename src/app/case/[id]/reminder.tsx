@@ -104,7 +104,7 @@ function ReminderForm({
           ? (await requestNotificationPermission()) === 'granted'
           : permission === 'granted';
       if (existing) {
-        await rescheduleReminder(existing.id, scheduledAt, type);
+        await rescheduleReminder(existing.id, scheduledAt, { type, reason: 'edit' });
       } else {
         await createReminder({ caseId: refundCase.id, type, scheduledAt });
       }

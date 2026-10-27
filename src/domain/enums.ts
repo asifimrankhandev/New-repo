@@ -83,6 +83,9 @@ export const eventType = labelled({
   'case-closed': 'Case closed',
   'case-reopened': 'Case reopened',
   'case-exported': 'Summary exported',
+  'reminder-set': 'Reminder set',
+  'reminder-snoozed': 'Reminder snoozed',
+  'reminder-completed': 'Reminder completed',
   note: 'Note',
 });
 export type EventType = (typeof eventType.values)[number];

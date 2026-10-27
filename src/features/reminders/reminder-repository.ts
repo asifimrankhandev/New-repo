@@ -2,8 +2,10 @@ import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { db, type Transaction } from '@/db/client';
 import { cases, reminders } from '@/db/schema';
-import type { ReminderType } from '@/domain/enums';
+import { formatTime, formatWeekdayDate } from '@/domain/dates';
+import { type EventType, type ReminderType, reminderShortLabels } from '@/domain/enums';
 import type { Reminder } from '@/domain/models';
+import { insertEvent } from '@/features/cases/case-repository';
 import { createId } from '@/lib/create-id';
 
 import {
@@ -34,6 +36,22 @@ function getReminder(id: string): Reminder | undefined {
   return db.select().from(reminders).where(eq(reminders.id, id)).get();
 }
 
+function describe(reminder: Pick<Reminder, 'type' | 'scheduledAt'>): string {
+  const at = new Date(reminder.scheduledAt);
+  return `${reminderShortLabels[reminder.type]} · ${formatWeekdayDate(at)}, ${formatTime(at)}`;
+}
+
+/** Reminder activity is part of the case history, recorded by the app (not the user). */
+function logReminderEvent(reminder: Reminder, type: EventType) {
+  insertEvent(db, {
+    caseId: reminder.caseId,
+    type,
+    source: 'system',
+    occurredAt: Date.now(),
+    description: describe(reminder),
+  });
+}
+
 export async function createReminder(input: {
   caseId: string;
   type: ReminderType;
@@ -41,6 +59,7 @@ export async function createReminder(input: {
 }): Promise<{ reminder: Reminder; notificationScheduled: boolean }> {
   const reminder: Reminder = { id: createId(), ...input, completedAt: null, createdAt: Date.now() };
   db.insert(reminders).values(reminder).run();
+  logReminderEvent(reminder, 'reminder-set');
   const refundCase = db.select().from(cases).where(eq(cases.id, input.caseId)).get();
   const notificationScheduled = refundCase
     ? await scheduleReminderNotification(reminder, refundCase)
@@ -48,21 +67,27 @@ export async function createReminder(input: {
   return { reminder, notificationScheduled };
 }
 
-export async function rescheduleReminder(id: string, scheduledAt: number, type?: ReminderType) {
+export async function rescheduleReminder(
+  id: string,
+  scheduledAt: number,
+  options: { type?: ReminderType; reason: 'edit' | 'snooze' },
+) {
   db.update(reminders)
-    .set({ scheduledAt, ...(type ? { type } : {}) })
+    .set({ scheduledAt, ...(options.type ? { type: options.type } : {}) })
     .where(eq(reminders.id, id))
     .run();
   await cancelReminderNotification(id);
   const reminder = getReminder(id);
-  const refundCase = reminder
-    ? db.select().from(cases).where(eq(cases.id, reminder.caseId)).get()
-    : undefined;
-  if (reminder && refundCase) await scheduleReminderNotification(reminder, refundCase);
+  if (!reminder) return;
+  logReminderEvent(reminder, options.reason === 'snooze' ? 'reminder-snoozed' : 'reminder-set');
+  const refundCase = db.select().from(cases).where(eq(cases.id, reminder.caseId)).get();
+  if (refundCase) await scheduleReminderNotification(reminder, refundCase);
 }
 
 export async function completeReminder(id: string) {
   db.update(reminders).set({ completedAt: Date.now() }).where(eq(reminders.id, id)).run();
+  const reminder = getReminder(id);
+  if (reminder) logReminderEvent(reminder, 'reminder-completed');
   await cancelReminderNotification(id);
 }
 

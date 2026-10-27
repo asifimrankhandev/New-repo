@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { BottomBar } from '@/components/ui/bottom-bar';
@@ -18,8 +18,15 @@ import {
   returnStepSchema,
   whatStepSchema,
 } from '@/domain/case-input';
-import { addDaysIso, combineDateAndTime, formatWeekdayDate, todayIso } from '@/domain/dates';
-import { createCase } from '@/features/cases/case-repository';
+import {
+  addDaysIso,
+  combineDateAndTime,
+  formatLongDate,
+  formatWeekdayDate,
+  todayIso,
+} from '@/domain/dates';
+import { findLikelyDuplicates } from '@/domain/duplicates';
+import { createCase, getAllCases } from '@/features/cases/case-repository';
 import {
   NotesField,
   RefundFields,
@@ -64,6 +71,7 @@ export default function NewCaseScreen() {
   const [step, setStep] = useState(0);
   const [reminderChoice, setReminderChoice] = useState<ReminderChoice>('none');
   const [saving, setSaving] = useState(false);
+  const [acknowledgedDuplicate, setAcknowledgedDuplicate] = useState<string | null>(null);
   const current = STEPS[step] ?? STEPS[0];
   const isLast = step === STEPS.length - 1;
 
@@ -119,8 +127,37 @@ export default function NewCaseScreen() {
     }
   };
 
-  const next = () => {
+  /** Warns once per retailer/item/order combination; the user can still create the case. */
+  const confirmNotDuplicate = async (): Promise<boolean> => {
+    const { retailerName, itemName, orderReference } = form.values;
+    const key = [retailerName, itemName, orderReference].join('|');
+    if (key === acknowledgedDuplicate) return true;
+    const matches = findLikelyDuplicates(
+      { retailerName, itemName, orderReference: orderReference || null },
+      getAllCases(),
+    );
+    const match = matches[0];
+    if (!match) return true;
+    const choice = await new Promise<'continue' | 'view' | 'cancel'>((resolve) =>
+      Alert.alert(
+        'You may already have this case',
+        `“${match.itemName}” from ${match.retailerName} was added ${formatLongDate(new Date(match.createdAt))}${match.archivedAt ? ' and is archived' : ''}.`,
+        [
+          { text: 'View existing', onPress: () => resolve('view') },
+          { text: 'Create anyway', onPress: () => resolve('continue') },
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve('cancel') },
+        ],
+        { cancelable: true, onDismiss: () => resolve('cancel') },
+      ),
+    );
+    if (choice === 'view') router.replace({ pathname: '/case/[id]', params: { id: match.id } });
+    if (choice === 'continue') setAcknowledgedDuplicate(key);
+    return choice === 'continue';
+  };
+
+  const next = async () => {
     if (!validateCurrent()) return;
+    if (step === 0 && !(await confirmNotDuplicate())) return;
     if (isLast) void save();
     else setStep(step + 1);
   };
@@ -195,7 +232,7 @@ export default function NewCaseScreen() {
             iconPlacement="tile"
             flex={1}
             loading={saving && isLast}
-            onPress={next}
+            onPress={() => void next()}
           />
         </BottomBar>
       }
